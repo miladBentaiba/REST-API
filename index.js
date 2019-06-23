@@ -2,9 +2,14 @@ express = require('express')
 const assert = require('assert')
 const bodyParser = require('body-parser')
 const { MongoClient, ObjectID } = require('mongodb')
+var cors = require('cors')
 const app = express();
 
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
 app.use(bodyParser.json())
+app.use(cors())
 
 
 const mongourl = 'mongodb://localhost:27017'
@@ -15,7 +20,7 @@ MongoClient.connect(mongourl, { useNewUrlParser: true }, (err, client) => {
 
   const db = client.db(database)
 
-  app.delete('/delete_contact/:id', (req, res) => {
+  app.delete('/delete_contact/:id', cors(), (req, res) => {
     let ID = ObjectID(req.params.id)
     db.collection('contacts').findOneAndDelete({ _id: ID }, (err, data) => {
       if (err) res.send(err)
@@ -23,14 +28,23 @@ MongoClient.connect(mongourl, { useNewUrlParser: true }, (err, client) => {
     })
   })
 
-  app.get('/contacts', (req, res) => {
+  app.post('/new_contact', (req, res) => {
+    console.log(req.body)
+    let new_product = req.body
+    db.collection('contacts').insertOne(new_product, (err, data) => {
+      if (err) res.send(err)
+      else res.send(data)
+    })
+  })
+
+  app.get('/contacts', cors(), (req, res) => {
     db.collection('contacts').find().toArray((err, data) => {
       if (err) res.send("error")
       else res.send(data)
     })
   })
 
-  app.get('/contacts/:id', (req, res) => {
+  app.get('/contacts/:id', cors(), (req, res) => {
     let ID = ObjectID(req.params.id)
     db.collection('contacts').findOne({ _id: ID }, (err, data) => {
       if (err) res.send("error")
@@ -38,15 +52,7 @@ MongoClient.connect(mongourl, { useNewUrlParser: true }, (err, client) => {
     })
   })
 
-  app.post('/new_contact', (req, res) => {
-    let new_product = req.body
-    db.collection('contacts').insertOne(new_product, (err, data) => {
-      if (err) res.send("error")
-      else res.send('contact added')
-    })
-  })
-
-  app.put('/update_contacts/:id', (req, res) => {
+  app.put('/update_contacts/:id', bodyParser.json(), (req, res) => {
     let ID = ObjectID(req.params.id)
     let modifiedContact = req.body
     db.collection('contacts').findOneAndUpdate({ _id: ID }, { $set: { ...modifiedContact } }, (err, data) => {
